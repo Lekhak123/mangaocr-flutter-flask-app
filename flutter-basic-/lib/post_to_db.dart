@@ -2,29 +2,30 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 // ignore: depend_on_referenced_packages
-import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:dio/dio.dart';
 
-Future<bool> db_post(input) async {
+Future<String> ocr(input) async {
   final String jsonstring = await rootBundle.loadString('config.json');
   final data = await json.decode(jsonstring);
-  var url = Uri.parse(data["entry_url"]);
+  var url = data["ocr_url"];
+  final dio = Dio();
 
   try {
-    await http.post(url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({'text': input}));
-    return true;
+    final response = await dio.post(url,
+        data: jsonEncode({'imgString': input}));
+    return response.data["text"];
   } catch (e) {
-    return false;
+    return e.toString();
   }
 }
 
-Future<void> db_clear() async {
-  final String jsonstring = await rootBundle.loadString('config.json');
-  final data = await json.decode(jsonstring);
-  var url = Uri.parse(data["clear_url"]);
+// Future<void> db_clear() async {
+//   final String jsonstring = await rootBundle.loadString('config.json');
+//   final data = await json.decode(jsonstring);
+//   var url = Uri.parse(data["clear_url"]);
 
-  try {
-    await http.post(url);
-  } catch (e) {}
-}
+//   try {
+//     await http.post(url);
+//   } catch (e) {}
+// }

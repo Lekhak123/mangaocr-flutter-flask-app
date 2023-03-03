@@ -1,3 +1,4 @@
 flask_cors
 manga_ocr
 flask
+pillow

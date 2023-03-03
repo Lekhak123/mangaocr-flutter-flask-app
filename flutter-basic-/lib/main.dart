@@ -1,18 +1,18 @@
-// ignore_for_file: unused_local_variable, no_leading_underscores_for_local_identifiers
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
 import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:path_provider/path_provider.dart';
-// import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:path/path.dart' as Path;
 import 'package:image_crop/image_crop.dart';
-// import "post_to_db.dart";
+import "post_to_db.dart";
 import 'package:image_picker/image_picker.dart';
+import 'package:translator/translator.dart';
 
+String myAppBarTitle = "Demo";
 Future<void> main() async {
   // ignore: prefer_const_constructors
   runApp(MaterialApp(
@@ -20,7 +20,10 @@ Future<void> main() async {
     home: Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text("Demo"),
+        title: Text(
+          myAppBarTitle,
+          textAlign: TextAlign.center,
+        ),
         backgroundColor: Colors.deepPurpleAccent,
       ),
       body: const HomePage(),
@@ -54,16 +57,21 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     // const assetImage = AssetImage('assets/images/1.jpg');
     ValueNotifier<String> imageString = useState("");
-    ValueNotifier<bool> initialLoad = useState(false);
     ValueNotifier<String> croppedString = useState('');
     ValueNotifier<bool> loadingcamera = useState(false);
     ValueNotifier<bool> loadingcrop = useState(false);
+    ValueNotifier<String> ocrTextstate = useState("");
 
     return ListView(
       shrinkWrap: true,
       children: <Widget>[
+        Text(
+          ocrTextstate.value,
+          textAlign: TextAlign.center,
+        ),
         OutlinedButton(
           onPressed: () async {
+            loadingcrop.value = false;
             loadingcamera.value = true;
             XFile? imageFile =
                 await ImagePicker().pickImage(source: ImageSource.camera);
@@ -77,7 +85,10 @@ class _HomePageState extends State<HomePage> {
           style: OutlinedButton.styleFrom(
             shape: const StadiumBorder(),
           ),
-          child: const Text('Load Image'),
+          child: const Text(
+            'Load Image',
+            textAlign: TextAlign.center,
+          ),
         ),
         Container(
           color: Colors.black,
@@ -95,20 +106,24 @@ class _HomePageState extends State<HomePage> {
                             .buffer
                             .asUint8List()))
                         .image,
-                    aspectRatio: 4.0 / 3.0,
                   ),
                 )
-              : const Text("Loading the image."),
+              : const Text(
+                  "Loading the image.",
+                  textAlign: TextAlign.center,
+                ),
         ),
         OutlinedButton(
           onPressed: () async {
+            if ((loadingcrop.value)) {
+              return;
+            }
+            ocrTextstate.value = "";
             loadingcrop.value = true;
             final crop = cropKey.currentState;
             final area = crop?.area as Rect;
-            final scale = crop?.scale as double;
 
             // File _image;
-            XFile? image;
             _savecrop() async {
               Uint8List toCropimagebuffer = Uint8List.fromList(base64
                   .decode(imageString.value.split(',').last)
@@ -127,6 +142,9 @@ class _HomePageState extends State<HomePage> {
               String base64Image = base64Encode(bytes);
               //ignore: prefer_interpolation_to_compose_strings
               croppedString.value = base64Image;
+              var ocrText = await ocr(base64Image);
+              myAppBarTitle = ocrText;
+              ocrTextstate.value = ocrText;
               loadingcrop.value = false;
             }
 
@@ -135,10 +153,18 @@ class _HomePageState extends State<HomePage> {
           style: OutlinedButton.styleFrom(
             shape: const StadiumBorder(),
           ),
-          child: const Text('OCR'),
+          child: (loadingcrop.value)
+              ? const Text(
+                  'Disabled',
+                  textAlign: TextAlign.center,
+                )
+              : const Text(
+                  'OCR',
+                  textAlign: TextAlign.center,
+                ),
         ),
         SingleChildScrollView(
-          child: !(croppedString.value == "")  & !(loadingcrop.value)
+          child: !(croppedString.value == "") & !(loadingcrop.value)
               ? Container(
                   color: Colors.black,
                   padding: const EdgeInsets.all(20.0),
@@ -156,9 +182,22 @@ class _HomePageState extends State<HomePage> {
                                 .image,
                           ),
                         )
-                      : const Text("."),
+                      : const Text(
+                          ".",
+                          textAlign: TextAlign.center,
+                        ),
                 )
-              : loadingcamera.value? const Text("Image not selected."): !(loadingcrop.value)? const Text(""):const Text("Processing the image."),
+              : loadingcamera.value
+                  ? const Text(
+                      "Image not selected.",
+                      textAlign: TextAlign.center,
+                    )
+                  : !(loadingcrop.value)
+                      ? const Text("")
+                      : const Text(
+                          "Processing the image.",
+                          textAlign: TextAlign.center,
+                        ),
         )
       ],
     );
